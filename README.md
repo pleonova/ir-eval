@@ -5,9 +5,11 @@ A Python project for evaluating search relevancy algorithms using IR metrics.
 ## Overview
 
 This project implements and evaluates multiple retrieval systems:
-- **BM25**: Classic term-based retrieval
-- **BM25 + Embeddings**: BM25 followed by embedding-based reranking
-- **BM25 + Embeddings + LLM Judge**: Full pipeline with LLM-based relevance judging
+- **BM25**: Classic term-based retrieval using TF-IDF weighting
+- **BM25 + Embeddings**: BM25 followed by dummy embedding-based reranking (placeholder implementation using deterministic random vectors)
+- **BM25 + Embeddings + Keyword Judge**: Full pipeline with keyword-counting based rescoring
+
+**Note**: This is a prototype/skeleton implementation. The embedding retriever uses dummy vectors (not real semantic embeddings), and the "judge" component uses simple keyword matching rather than an actual LLM.
 
 Evaluation metrics include Precision@k, MRR, and NDCG@k.
 
@@ -50,12 +52,12 @@ ir-eval/
 ├── data/
 │   ├── corpus.jsonl      # Document corpus
 │   ├── queries.jsonl     # Test queries
-│   └── qrels.jsonl        # Relevance judgments
+│   └── qrels.jsonl        # Relevance judgments (3-point scale)
 ├── retrievers/
-│   ├── bm25.py           # BM25 retriever
-│   ├── embeddings.py     # Embedding-based retriever
-│   └── llm_judge.py      # LLM-based judge
-├── metrics.py            # Evaluation metrics
+│   ├── bm25.py           # BM25 retriever implementation
+│   ├── embeddings.py     # Dummy embedding retriever (deterministic random vectors) 
+│   └── llm_judge.py      # Keyword-counting rescorer (not an actual LLM - placeholder)
+├── metrics.py            # Evaluation metrics (Precision@k, MRR, NDCG@k)
 ├── rank.py               # Main ranking and evaluation script
 └── tests/                # Unit tests
 ```

@@ -5,7 +5,7 @@ A Python project for evaluating search relevancy algorithms using IR metrics.
 ## Overview
 
 This project implements and evaluates multiple retrieval systems:
-- **BM25**: Classic term-based retrieval using TF-IDF weighting
+- **BM25**: Classic probabilistic ranking function with term frequency saturation and length normalization
 - **BM25 + Embeddings**: BM25 followed by dummy embedding-based reranking (placeholder implementation using deterministic random vectors)
 - **BM25 + Embeddings + Keyword Judge**: Full pipeline with keyword-counting based rescoring
 

@@ -1,50 +1,21 @@
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
+*.pyc
+*.pyo
 
 # Virtual environments
-.venv/
 venv/
-ENV/
+.venv/
 env/
 
-# Data files
-data/
+# Environment variables
+.env
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
 
 # Distribution / packaging
-build/
-dist/
 *.egg-info/
-.eggs/
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-
-# Jupyter Notebook
-.ipynb_checkpoints/
-
-# Environment variables
-.env
-.env.local
-
-# Model outputs
-*.model
-*.pkl
-*.pickle
+dist/
+build/

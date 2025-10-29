@@ -10,6 +10,9 @@ class BM25:
     - Term frequency saturation (controlled by k1): diminishing returns for repeated terms
     - Length normalization (controlled by b): adjusts scores based on document length
     - IDF (Inverse Document Frequency): measures how rare/common a term is across documents
+    
+    For a concrete example of how BM25 works and why rare terms score higher,
+    see the "How BM25 Works" section in the README.md file.
     """
     def __init__(self, k1: float = 1.5, b: float = 0.75):
         """

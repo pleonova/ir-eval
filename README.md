@@ -30,6 +30,47 @@ python rank.py
 
 This will output performance metrics for each system.
 
+## How BM25 Works: A Concrete Example
+
+To understand BM25's behavior, let's walk through a simple example:
+
+**Corpus:**
+- Document d1: "a a b" (term 'a' appears twice)
+- Document d2: "b c"
+
+**Query:** "a b"
+
+**Results:**
+1. d1: score 1.0977
+2. d2: score 0.2004
+
+### Why d1 Scores Much Higher
+
+**Document d1 (1.0977)** ✅
+- Matches BOTH query terms: "a" and "b"
+- Contains "a" (twice!) - **RARE term** (only in 1/2 docs) → high IDF → big score boost (~0.89)
+- Contains "b" (once) - common term (in 2/2 docs) → low IDF → small contribution (~0.20)
+
+**Document d2 (0.2004)** ⚠️
+- Matches only ONE query term: "b"
+- Does NOT contain "a" → no contribution (0.0)
+- Contains "b" (once) - common term → low IDF → small score (~0.20)
+
+### Key BM25 Principles
+
+1. **IDF (Inverse Document Frequency)**: Rare terms are weighted more heavily
+   - Term "a": appears in 1/2 documents → HIGH IDF
+   - Term "b": appears in 2/2 documents → LOW IDF
+
+2. **Term Frequency Saturation**: Multiple occurrences help, but with diminishing returns
+   - d1 has "a" twice, but doesn't get full 2x credit (controlled by parameter k1=1.5)
+
+3. **Matching Multiple Query Terms**: Documents matching more query terms rank higher
+   - d1 matches 2/2 query terms
+   - d2 matches 1/2 query terms
+
+**The Big Insight**: BM25 correctly ranks d1 first because it matches MORE query terms and contains the RARE term "a" which has high discriminative power. Common terms like "b" that appear in many documents contribute less to the final score.
+
 ## API Reference
 
 ### Metrics (`metrics.py`)

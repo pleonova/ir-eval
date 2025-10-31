@@ -36,8 +36,15 @@ The `demos/` folder contains example scripts and notebooks to help you explore t
 
 - **`demo_jina_embeddings.py`**: Python script demonstrating how to use the Jina embedding retriever with real semantic embeddings
 - **`demo_retrievers.ipynb`**: Interactive Jupyter notebook walking through different retrieval approaches, comparing BM25 and embedding-based methods
+- **`demo_dcg_comparison.py`**: Comparison of exponential vs linear DCG formulas with concrete examples showing position discounts and relevance gains
 
-These demos provide hands-on examples of using the retrieval systems and are great starting points for experimentation.
+Run demos from the project root:
+```bash
+python demos/demo_dcg_comparison.py
+python demos/demo_jina_embeddings.py
+```
+
+These demos provide hands-on examples of using the retrieval systems and metrics, and are great starting points for experimentation.
 
 ## How BM25 Works: A Concrete Example
 
@@ -135,10 +142,100 @@ Research shows asymmetric encoding provides:
 
 ### Metrics (`metrics.py`)
 
-- `ndcg_at_k(ranked_ids, qrels, k)`: Calculate NDCG@k for a query
+- `ndcg_at_k(ranked_ids, qrels, k, method="exponential")`: Calculate NDCG@k for a query
+- `dcg_at_k(rels, k, method="exponential")`: Calculate DCG@k with exponential or linear gains
 - `precision_at_k(ranked_ids, qrels, k)`: Calculate Precision@k
 - `mrr(ranked_ids, qrels)`: Calculate Mean Reciprocal Rank
-- `evaluate_all(run, qrels, k)`: Evaluate all queries and return aggregate metrics
+- `evaluate_all(run, qrels, k, method="exponential")`: Evaluate all queries and return aggregate metrics
+
+#### Choosing the Right Metric
+
+**Relevance scores** are ground truth labels needed for evaluation. They can be:
+- **Binary**: 0 (not relevant) or 1 (relevant)
+- **Graded**: Numerical scores like 0-3 or 1-5
+
+**Which metric should you use?**
+
+| Your Data | Metric | When to Use | What It Measures |
+|-----------|--------|-------------|------------------|
+| **Graded relevance** (0-3 scale) | `ndcg_at_k()` | ✅ **Best for this project** | Rewards highly relevant docs more; normalized score 0-1 |
+| Binary (0/1) or Graded | `precision_at_k()` | Any relevant docs in top k? | % of top-k that are relevant (treats any rel > 0 as relevant) |
+| Binary (0/1) or Graded | `mrr()` | Where's first relevant result? | Reciprocal rank of first relevant doc (1/position) |
+
+**This project uses graded relevance** (see `data/qrels.jsonl` with `rel: 3`, `rel: 1`, etc.), so **NDCG@k is the most appropriate metric** as it properly weights the difference between highly relevant and somewhat relevant documents.
+
+#### DCG Formula: Exponential vs Linear
+
+The `dcg_at_k()` and `ndcg_at_k()` functions support two formulations (defaults to exponential):
+
+**Formula Structure:**
+```
+DCG = Σ(relevance_gain / position_discount)
+```
+- **Position discount**: SAME for both formulas (log2(i+2))
+- **Relevance gain**: DIFFERENT between formulas (this is what changes!)
+
+**1. Exponential (default, stricter)** - `method="exponential"`
+```
+DCG = Σ((2^rel_i - 1) / log2(i+2))   where i=0,1,2,... (0-indexed position)
+```
+- ✅ **Use this for graded relevance** (recommended for this project)
+- Used by Google, Kaggle competitions, TREC benchmarks
+- Strongly emphasizes highly relevant documents
+- **Relevance gains**: `rel=0→0`, `rel=1→1`, `rel=2→3`, `rel=3→7` ⭐
+
+**2. Linear (simpler)** - `method="linear"`
+```
+DCG = Σ(rel_i / log2(i+2))   where i=0,1,2,... (0-indexed position)
+```
+- Use when you want proportional scaling of relevance grades
+- **Relevance gains**: `rel=0→0`, `rel=1→1`, `rel=2→2`, `rel=3→3` (proportional)
+- **Same as exponential when relevance is binary** (0 or 1)
+
+**Position discounts** (same for both): pos 1→1.0, pos 2→0.63, pos 3→0.5, pos 4→0.43, pos 5→0.39
+
+#### Concrete Example: How Both Parts Work Together
+
+Document with **rel=3** at **position 2** (i=1):
+
+**Linear DCG:**
+```
+relevance_gain = 3 (just the relevance score)
+position_discount = log2(1+2) = log2(3) = 1.585
+contribution = 3 / 1.585 = 1.89
+```
+
+**Exponential DCG:**
+```
+relevance_gain = 2^3 - 1 = 7 (exponential boost!)
+position_discount = log2(1+2) = log2(3) = 1.585 (same as linear!)
+contribution = 7 / 1.585 = 4.42
+```
+
+**Key insight**: Exponential gives this document **2.3x more weight** (4.42 vs 1.89) because of the gain formula (7 vs 3), even though the position discount is identical. Both formulas penalize lower positions the same way; they differ only in how they reward relevance.
+
+**Example comparison**:
+```python
+# Query results with graded relevance
+ranked_ids = ['doc1', 'doc2', 'doc3']
+qrels = {'doc1': 3, 'doc2': 1, 'doc3': 0}  # Graded: highly, somewhat, not relevant
+
+# Using exponential DCG (default - stricter, emphasizes high relevance)
+ndcg_at_k(ranked_ids, qrels, k=3)                      # 1.0 - Perfect ranking!
+ndcg_at_k(ranked_ids, qrels, k=3, method="exponential") # 1.0 - Same (explicit)
+
+# Using linear DCG (simpler, equal weighting)
+ndcg_at_k(ranked_ids, qrels, k=3, method="linear")     # 1.0 - Also perfect
+
+# Other metrics (binary treatment of relevance)
+precision_at_k(ranked_ids, qrels, k=3)  # 0.67 - 2 out of 3 are relevant (any rel > 0)
+mrr(ranked_ids, qrels)                  # 1.0 - First result is relevant
+
+# For binary relevance data, both DCG methods give identical results
+binary_qrels = {'doc1': 1, 'doc2': 1, 'doc3': 0}  # Binary relevance
+ndcg_at_k(ranked_ids, binary_qrels, k=3, method="exponential")  # Same result
+ndcg_at_k(ranked_ids, binary_qrels, k=3, method="linear")       # Same result
+```
 
 ### Ranking (`rank.py`)
 

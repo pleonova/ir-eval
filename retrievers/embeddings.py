@@ -1,5 +1,6 @@
 from typing import List, Dict, Tuple, Optional
 import numpy as np
+import torch
 from sentence_transformers import SentenceTransformer
 
 
@@ -50,7 +51,17 @@ class DummyEmbedder:
         vecs = []
         for t in texts:
             rs = np.random.RandomState(abs(hash(t)) % (2**32))
-            vecs.append(rs.rand(384))
+            # Generate random vector in reasonable range
+            vec = rs.randn(384)  # Use randn for normal distribution
+            # Normalize to unit length to avoid numerical issues
+            norm = np.linalg.norm(vec)
+            if norm > 1e-10:  # Avoid division by zero
+                vec = vec / norm
+            else:
+                # Fallback for edge case: create a simple unit vector
+                vec = np.zeros(384)
+                vec[0] = 1.0
+            vecs.append(vec)
         return np.vstack(vecs)
 
 
@@ -98,13 +109,17 @@ class EmbeddingRetriever:
         
         # Compute similarity scores
         # Note: Jina embeddings are pre-normalized, so dot product = cosine similarity
-        # For DummyEmbedder or other embedders, we normalize to ensure correctness
-        if isinstance(self.embedder, JinaEmbedder):
-            # Already normalized - use efficient dot product
-            sims = self.doc_vecs @ qv
-        else:
-            # Compute cosine similarity with manual normalization
-            sims = (self.doc_vecs @ qv) / (np.linalg.norm(self.doc_vecs, axis=1) * (np.linalg.norm(qv) + 1e-9))
+        # DummyEmbedder also produces normalized vectors, so we can use dot product
+        # Without normalization:
+        # similarity = (vec1 @ vec2) / (||vec1|| * ||vec2||)  # Need to divide by norms
+        doc_vecs_torch = torch.from_numpy(self.doc_vecs).float()
+        qv_torch = torch.from_numpy(qv).float()
+        
+        # Compute dot product (equivalent to cosine similarity for normalized vectors)
+        sims = torch.matmul(doc_vecs_torch, qv_torch)
+        
+        # Convert back to numpy and handle edge cases
+        sims = sims.numpy()
         
         pairs = list(zip(self.doc_ids, sims.tolist()))
         return sorted(pairs, key=lambda x: x[1], reverse=True)[:k]

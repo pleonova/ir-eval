@@ -19,3 +19,7 @@ env/
 *.egg-info/
 dist/
 build/
+
+# Test Coverage
+.coverage
+coverage.json

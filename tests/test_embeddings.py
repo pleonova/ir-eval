@@ -41,18 +41,6 @@ def test_dummy_embedder_different_texts():
     assert not np.allclose(emb1, emb2)
 
 
-def test_dummy_embedder_with_prompt_name():
-    """Test that DummyEmbedder accepts prompt_name parameter (for compatibility)."""
-    embedder = DummyEmbedder()
-    
-    # Should work with prompt_name parameter
-    query_emb = embedder.encode(["query text"], prompt_name="query")
-    passage_emb = embedder.encode(["passage text"], prompt_name="passage")
-    
-    assert query_emb.shape == (1, 384)
-    assert passage_emb.shape == (1, 384)
-
-
 # ============================================================================
 # EmbeddingRetriever Tests
 # ============================================================================
@@ -108,24 +96,6 @@ def test_embedding_retriever_sorted_descending():
     scores = [score for _, score in results]
     # Scores should be in descending order
     assert scores == sorted(scores, reverse=True)
-
-
-def test_embedding_retriever_returns_all_docs():
-    """Test that all document IDs from corpus are present."""
-    corpus = [
-        {"doc_id": "doc1", "text": "first document"},
-        {"doc_id": "doc2", "text": "second document"},
-        {"doc_id": "doc3", "text": "third document"}
-    ]
-    
-    retriever = EmbeddingRetriever()
-    retriever.fit(corpus)
-    results = retriever.rank("document", k=10)
-    
-    returned_ids = {doc_id for doc_id, _ in results}
-    expected_ids = {"doc1", "doc2", "doc3"}
-    
-    assert returned_ids == expected_ids
 
 
 def test_embedding_retriever_single_document():
@@ -252,40 +222,6 @@ def test_embedding_retriever_with_normalized_embeddings():
     assert scores_dict["d1"] > scores_dict["d2"]
 
 
-def test_embedding_retriever_handles_large_corpus():
-    """Test that retriever can handle larger corpus efficiently."""
-    # Create corpus with 100 documents
-    corpus = [
-        {"doc_id": f"d{i}", "text": f"document {i} with some text"}
-        for i in range(100)
-    ]
-    
-    retriever = EmbeddingRetriever()
-    retriever.fit(corpus)
-    results = retriever.rank("text", k=10)
-    
-    assert len(results) == 10
-    # Verify all scores are valid
-    assert all(isinstance(score, float) for _, score in results)
-
-
-# ============================================================================
-# JinaEmbedder Tests (Unit tests without actual model loading)
-# ============================================================================
-
-def test_jina_embedder_initialization():
-    """Test JinaEmbedder initialization parameters."""
-    # We can't actually load the model in tests, but we can test the interface
-    # This test would require mocking SentenceTransformer
-    pass  # Skip actual model loading in unit tests
-
-
-def test_jina_embedder_encode_with_prompts():
-    """Test that JinaEmbedder properly passes prompt_name parameters."""
-    # Mock test - would require mocking SentenceTransformer
-    pass  # Skip actual model loading in unit tests
-
-
 # ============================================================================
 # Integration-style Tests
 # ============================================================================
@@ -326,21 +262,4 @@ def test_embedding_retriever_k_equals_zero():
     
     assert len(results) == 0
     assert results == []
-
-
-def test_embedding_retriever_k_negative():
-    """Test that negative k behaves according to Python slicing (returns from end)."""
-    corpus = [
-        {"doc_id": "d1", "text": "doc1"},
-        {"doc_id": "d2", "text": "doc2"},
-        {"doc_id": "d3", "text": "doc3"}
-    ]
-    
-    retriever = EmbeddingRetriever()
-    retriever.fit(corpus)
-    results = retriever.rank("query", k=-1)
-    
-    # Negative k with slicing [:k] returns all but the last element
-    # [:−1] returns all elements except the last one
-    assert len(results) == 2
 

@@ -30,6 +30,15 @@ python rank.py
 
 This will output performance metrics for each system.
 
+## Demo Files
+
+The `demos/` folder contains example scripts and notebooks to help you explore the retrieval systems:
+
+- **`demo_jina_embeddings.py`**: Python script demonstrating how to use the Jina embedding retriever with real semantic embeddings
+- **`demo_retrievers.ipynb`**: Interactive Jupyter notebook walking through different retrieval approaches, comparing BM25 and embedding-based methods
+
+These demos provide hands-on examples of using the retrieval systems and are great starting points for experimentation.
+
 ## How BM25 Works: A Concrete Example
 
 To understand BM25's behavior, let's walk through a simple example:
@@ -94,6 +103,9 @@ ir-eval/
 │   ├── corpus.jsonl      # Document corpus
 │   ├── queries.jsonl     # Test queries
 │   └── qrels.jsonl        # Relevance judgments (3-point scale)
+├── demos/
+│   ├── demo_jina_embeddings.py  # Example script using Jina embeddings
+│   └── demo_retrievers.ipynb     # Interactive notebook for exploring retrievers
 ├── retrievers/
 │   ├── bm25.py           # BM25 retriever implementation
 │   ├── embeddings.py     # Dummy embedding retriever (deterministic random vectors) 

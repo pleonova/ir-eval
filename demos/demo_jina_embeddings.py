@@ -14,6 +14,12 @@ Run with: python demo_jina_embeddings.py
 Note: First run will download the model (~12GB) which may take some time.
 """
 
+import sys
+from pathlib import Path
+
+# Add parent directory to path so we can import from retrievers
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import numpy as np
 from retrievers.embeddings import JinaEmbedder, DummyEmbedder, EmbeddingRetriever
 

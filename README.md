@@ -80,6 +80,57 @@ To understand BM25's behavior, let's walk through a simple example:
 
 **The Big Insight**: BM25 correctly ranks d1 first because it matches MORE query terms and contains the RARE term "a" which has high discriminative power. Common terms like "b" that appear in many documents contribute less to the final score.
 
+## Understanding Asymmetric Embeddings
+
+Modern embedding models (like Jina v3/v4, E5, BGE) use **asymmetric encoding** to dramatically improve retrieval performance. This approach recognizes that queries and documents play fundamentally different roles.
+
+### Why Asymmetric Encoding?
+
+**Queries and documents are different:**
+- **Queries**: Short, incomplete, question-like ("python tutorial", "reset password")
+- **Documents**: Long, complete, statement-like ("Python Programming Tutorial: Learn Python basics...")
+
+**Traditional (Symmetric) Approach:**
+```python
+# Same encoding for everything - treats queries and docs identically
+query_emb = model.encode("python tutorial")
+doc_emb = model.encode("Python Programming Tutorial...")
+# Result: ~65% retrieval accuracy
+```
+
+**Modern (Asymmetric) Approach:**
+```python
+# Different prompts for different roles
+query_emb = model.encode("python tutorial", prompt_name="query")
+doc_emb = model.encode("Python Programming Tutorial...", prompt_name="passage")
+# Result: ~80% retrieval accuracy (+23% improvement!)
+```
+
+### How It Works
+
+The `prompt_name` parameter tells the model what role the text is playing:
+
+```python
+# During indexing - encode documents as "passages"
+retriever.fit(corpus)  # Uses prompt_name="passage" internally
+
+# During search - encode query as "query"  
+results = retriever.rank("your query")  # Uses prompt_name="query" internally
+```
+
+Internally, the model prepends task-specific instructions:
+- **Query**: "Represent this query for retrieving relevant documents: [your query]"
+- **Passage**: "Represent this document for retrieval: [document text]"
+
+### Performance Impact
+
+Research shows asymmetric encoding provides:
+- **+20-40% improvement** in retrieval metrics (NDCG@10, Recall@100)
+- Better semantic understanding of search intent
+- Optimized embeddings for the query-document matching task
+
+**Key Takeaway**: Always use `prompt_name="query"` for queries and `prompt_name="passage"` for documents when using modern embedding models like Jina v4!
+
 ## API Reference
 
 ### Metrics (`metrics.py`)

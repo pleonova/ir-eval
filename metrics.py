@@ -130,4 +130,9 @@ def evaluate_all(run: Dict[str, List[str]], qrels: Dict[str, Dict[str, int]], k:
         p_sum += precision_at_k(ranked_ids, qrels[qid], k)
         mrr_sum += mrr(ranked_ids, qrels[qid])
         ndcg_sum += ndcg_at_k(ranked_ids, qrels[qid], k, method=method)
-    return {"queries": qs, f"P@{k}": p_sum/max(1,qs), "MRR": mrr_sum/max(1,qs), f"NDCG@{k}": ndcg_sum/max(1,qs)}
+    return {
+        "queries": qs, 
+        f"P@{k}": round(p_sum/max(1,qs), 2), 
+        "MRR": round(mrr_sum/max(1,qs), 2), 
+        f"NDCG@{k}": round(ndcg_sum/max(1,qs), 2)
+    }

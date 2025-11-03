@@ -68,19 +68,30 @@ def run_system(queries, corpus, mode="bm25->embed->judge", k=3):
     # Initialize retrievers based on mode
     doc_lookup = {d["doc_id"]: d["text"] for d in corpus}  # Fast document text lookup
     
-    # Check if we need embeddings-only mode
+    # Check for single-method modes
+    if mode == "bm25":
+        # Pure BM25 retrieval
+        bm25 = BM25()
+        bm25.fit(corpus)
+        results = {}
+        for q in queries:
+            qid, qtext = q["qid"], q["query"]
+            r_bm25 = bm25.rank(qtext, k=k)
+            results[qid] = [d for d, _ in r_bm25]
+        return results
+    
     if mode == "embed":
+        # Pure embedding retrieval
         embed = EmbeddingRetriever()
         embed.fit(corpus)
         results = {}
         for q in queries:
             qid, qtext = q["qid"], q["query"]
-            # Use embeddings directly on full corpus
             r_embed = embed.rank(qtext, k=k)
             results[qid] = [d for d, _ in r_embed]
         return results
     
-    # For all other modes, initialize all retrievers
+    # For multi-stage modes, initialize all retrievers
     bm25 = BM25(); bm25.fit(corpus)
     embed = EmbeddingRetriever(); embed.fit(corpus)
     judge = LLMJudge()

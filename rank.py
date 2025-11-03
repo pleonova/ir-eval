@@ -11,7 +11,7 @@ The pipeline progressively refines results for better precision.
 
 import json
 from retrievers.bm25 import BM25
-from retrievers.embeddings import EmbeddingRetriever
+from retrievers.embeddings import EmbeddingRetriever, JinaEmbedder
 from retrievers.llm_judge import LLMJudge
 from metrics import evaluate_all
 
@@ -47,7 +47,7 @@ def build_qrels(items):
         qrels.setdefault(it["qid"], {})[it["doc_id"]] = int(it["rel"])
     return qrels
 
-def run_system(queries, corpus, mode="bm25->embed->judge", k=3):
+def run_system(queries, corpus, mode="bm25->embed->judge", k=3, jina_embedder=None):
     """
     Run a multi-stage retrieval pipeline on queries.
     
@@ -61,6 +61,7 @@ def run_system(queries, corpus, mode="bm25->embed->judge", k=3):
         corpus: List of document dicts with 'doc_id' and 'text' keys
         mode: Pipeline mode - can be "bm25", "embed", "bm25->embed", or "bm25->embed->judge"
         k: Number of final results to return per query
+        jina_embedder: Optional pre-initialized JinaEmbedder instance to reuse across calls
         
     Returns:
         Dict mapping query IDs to lists of top-k document IDs
@@ -80,9 +81,13 @@ def run_system(queries, corpus, mode="bm25->embed->judge", k=3):
             results[qid] = [d for d, _ in r_bm25]
         return results
     
+    # For modes that need embeddings, create or reuse embedder
+    if jina_embedder is None:
+        jina_embedder = JinaEmbedder(model_name="jinaai/jina-embeddings-v4", task="retrieval")
+    
     if mode == "embed":
-        # Pure embedding retrieval
-        embed = EmbeddingRetriever()
+        # Pure embedding retrieval with Jina
+        embed = EmbeddingRetriever(embedder=jina_embedder)
         embed.fit(corpus)
         results = {}
         for q in queries:
@@ -93,7 +98,7 @@ def run_system(queries, corpus, mode="bm25->embed->judge", k=3):
     
     # For multi-stage modes, initialize all retrievers
     bm25 = BM25(); bm25.fit(corpus)
-    embed = EmbeddingRetriever(); embed.fit(corpus)
+    embed = EmbeddingRetriever(embedder=jina_embedder); embed.fit(corpus)
     judge = LLMJudge()
 
     results = {}
@@ -139,11 +144,16 @@ def main():
     corpus = load_jsonl("data/corpus.jsonl")
     qrels = build_qrels(load_jsonl("data/qrels.jsonl"))
 
-    # Run four different pipeline configurations
-    run1 = run_system(queries, corpus, mode="bm25", k=3)
-    run2 = run_system(queries, corpus, mode="embed", k=3)
-    run3 = run_system(queries, corpus, mode="bm25->embed", k=3)
-    run4 = run_system(queries, corpus, mode="bm25->embed->judge", k=3)
+    # Initialize Jina embedder once and reuse across all modes that need it
+    print("Loading Jina embeddings model (one-time initialization)...")
+    jina_embedder = JinaEmbedder(model_name="jinaai/jina-embeddings-v4", task="retrieval")
+    print("✓ Model loaded!\n")
+
+    # Run four different pipeline configurations (reusing the same embedder)
+    run1 = run_system(queries, corpus, mode="bm25", k=3, jina_embedder=jina_embedder)
+    run2 = run_system(queries, corpus, mode="embed", k=3, jina_embedder=jina_embedder)
+    run3 = run_system(queries, corpus, mode="bm25->embed", k=3, jina_embedder=jina_embedder)
+    run4 = run_system(queries, corpus, mode="bm25->embed->judge", k=3, jina_embedder=jina_embedder)
 
     # Evaluate and compare all approaches
     for name, run in [("BM25", run1), ("EMBED", run2), ("BM25+EMB", run3), ("BM25+EMB+JUDGE", run4)]:

@@ -47,7 +47,7 @@ def build_qrels(items):
         qrels.setdefault(it["qid"], {})[it["doc_id"]] = int(it["rel"])
     return qrels
 
-def run_system(queries, corpus, mode="bm25->embed->judge", k=5):
+def run_system(queries, corpus, mode="bm25->embed->judge", k=3):
     """
     Run a multi-stage retrieval pipeline on queries.
     
@@ -129,14 +129,14 @@ def main():
     qrels = build_qrels(load_jsonl("data/qrels.jsonl"))
 
     # Run four different pipeline configurations
-    run1 = run_system(queries, corpus, mode="bm25", k=5)
-    run2 = run_system(queries, corpus, mode="embed", k=5)
-    run3 = run_system(queries, corpus, mode="bm25->embed", k=5)
-    run4 = run_system(queries, corpus, mode="bm25->embed->judge", k=5)
+    run1 = run_system(queries, corpus, mode="bm25", k=3)
+    run2 = run_system(queries, corpus, mode="embed", k=3)
+    run3 = run_system(queries, corpus, mode="bm25->embed", k=3)
+    run4 = run_system(queries, corpus, mode="bm25->embed->judge", k=3)
 
     # Evaluate and compare all approaches
     for name, run in [("BM25", run1), ("EMBED", run2), ("BM25+EMB", run3), ("BM25+EMB+JUDGE", run4)]:
-        print(name, evaluate_all(run, qrels, k=5))
+        print(name, evaluate_all(run, qrels, k=3))
 
 if __name__ == "__main__":
     main()
